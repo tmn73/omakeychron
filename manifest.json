@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "id": "io.github.paulsp94.omakeychron",
+  "name": "Omakeychron",
+  "version": "1.0.0",
+  "author": "paulsp94",
+  "license": "MIT",
+  "description": "Your Keychron keyboard, wearing your theme. Pushes the active theme's keyboard color to any wired Keychron with QMK/VIA firmware over raw HID — no OpenRGB, no daemon — and saves it to onboard memory so it survives replugs and going wireless.",
+  "kinds": ["service"],
+  "entryPoints": {
+    "service": "Service.qml"
+  }
+}
