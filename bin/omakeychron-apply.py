@@ -32,6 +32,9 @@ CHANNEL_RGB_MATRIX = 0x03
 VALUE_EFFECT = 0x02
 VALUE_COLOR = 0x04
 EFFECT_SOLID_COLOR = 0x01
+VIA_CUSTOM_CHANNELS = 0x000C  # protocol version that introduced channel-based values
+LEGACY_VALUE_EFFECT = 0x81  # VIA v10 id_qmk_rgb_matrix_effect
+LEGACY_VALUE_COLOR = 0x83  # VIA v10 id_qmk_rgb_matrix_color
 
 
 def read_theme_color():
@@ -145,11 +148,19 @@ def apply_color(hexcolor):
         try:
             if not stat.S_ISCHR(os.fstat(fd).st_mode):
                 continue
-            if xfer(fd, [0x01]) is None:  # id_get_protocol_version handshake
+            version = xfer(fd, [0x01])  # id_get_protocol_version handshake
+            if version is None:
                 continue  # the Link dongle's dead interface lands here
-            ok = xfer(fd, [CMD_CUSTOM_SET, CHANNEL_RGB_MATRIX, VALUE_EFFECT, EFFECT_SOLID_COLOR])
-            ok2 = xfer(fd, [CMD_CUSTOM_SET, CHANNEL_RGB_MATRIX, VALUE_COLOR, int(h * 255), int(s * 255)])
-            xfer(fd, [CMD_CUSTOM_SAVE, CHANNEL_RGB_MATRIX])
+            if (version[1] << 8 | version[2]) >= VIA_CUSTOM_CHANNELS:
+                ok = xfer(fd, [CMD_CUSTOM_SET, CHANNEL_RGB_MATRIX, VALUE_EFFECT, EFFECT_SOLID_COLOR])
+                ok2 = xfer(fd, [CMD_CUSTOM_SET, CHANNEL_RGB_MATRIX, VALUE_COLOR, int(h * 255), int(s * 255)])
+                xfer(fd, [CMD_CUSTOM_SAVE, CHANNEL_RGB_MATRIX])
+            else:
+                # Older firmware (e.g. Q1 Pro 1.02) speaks VIA v10: no channel byte,
+                # RGB matrix values live at fixed IDs 0x80-0x83.
+                ok = xfer(fd, [CMD_CUSTOM_SET, LEGACY_VALUE_EFFECT, EFFECT_SOLID_COLOR])
+                ok2 = xfer(fd, [CMD_CUSTOM_SET, LEGACY_VALUE_COLOR, int(h * 255), int(s * 255)])
+                xfer(fd, [CMD_CUSTOM_SAVE])
             if ok is None or ok2 is None:
                 sys.exit(f"{dev}: keyboard stopped responding mid-write")
             return True
